@@ -1,0 +1,12 @@
+<resources>
+    <string-array name="income_categories">
+        <item>Зарплата</item>
+        <item>Подарунок</item>
+        <item>Стипендія</item>
+    </string-array>
+    <string-array name="expense_categories">
+        <item>Продукти</item>
+        <item>Транспорт</item>
+        <item>Розваги</item>
+    </string-array>
+</resources>

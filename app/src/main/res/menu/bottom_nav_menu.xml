@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/homeFragment"
+        android:icon="@drawable/ic_home"
+        android:title="Головна" />
+    <item
+        android:id="@+id/historyFragment"
+        android:icon="@drawable/ic_history"
+        android:title="Історія" />
+    <item
+        android:id="@+id/categoriesFragment"
+        android:icon="@drawable/ic_categories"
+        android:title="Категорії" />
+    <item
+        android:id="@+id/currencyFragment"
+        android:icon="@drawable/ic_currency_exchange"
+        android:title="Курси валют" />
+</menu>

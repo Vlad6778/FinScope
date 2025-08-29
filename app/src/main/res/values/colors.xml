@@ -1,0 +1,18 @@
+<resources>
+    <color name="background">#F5F5F5</color>
+    <color name="text">#333333</color>
+    <color name="income_color">#4CAF50</color>
+    <color name="expense_color">#F44336</color>
+    <color name="button_action">#2196F3</color>
+    <color name="button_cancel">#757575</color>
+    <color name="income_color_chip">#E8F5E9</color> <color name="expense_color_chip">#FFEBEE</color> <color name="text_color_income_chip">#388E3C</color>
+    <color name="text_color_expense_chip">#D32F2F</color>
+    <!-- Нові кольори для теми -->
+    <color name="colorPrimary">#2196F3</color> <!-- Використовуємо button_action -->
+    <color name="colorPrimaryVariant">#1976D2</color> <!-- Темніший відтінок -->
+    <color name="colorOnPrimary">#FFFFFF</color> <!-- Текст на primary-кнопці -->
+
+    <color name="colorSecondary">#4CAF50</color> <!-- income_color -->
+    <color name="colorSecondaryVariant">#388E3C</color>
+    <color name="colorOnSecondary">#FFFFFF</color>
+</resources>

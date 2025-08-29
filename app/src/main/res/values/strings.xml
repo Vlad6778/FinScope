@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">FinScope</string>
+    <string name="select_type_first_prompt">Спочатку оберіть тип</string>
+    <string name="default_category_prompt">Оберіть категорію...</string>
+</resources>
