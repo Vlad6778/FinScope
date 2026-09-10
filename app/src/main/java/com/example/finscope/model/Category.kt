@@ -17,5 +17,6 @@ data class Category(
     val category_id: Int = 0,
     val user_id: Int,
     val name: String,
-    val type: String
+    val type: String, // "income" or "expense"
+    val keywords: String? = null // Comma separated keywords for auto-categorization
 )

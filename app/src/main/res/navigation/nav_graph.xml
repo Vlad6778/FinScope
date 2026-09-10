@@ -14,6 +14,19 @@
         <action
             android:id="@+id/action_home_to_addTransaction"
             app:destination="@id/addTransactionFragment" />
+        <action
+            android:id="@+id/action_home_to_settings"
+            app:destination="@id/settingsFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/analyticsFragment"
+        android:name="com.example.finscope.AnalyticsFragment"
+        android:label="fragment_analytics"
+        tools:layout="@layout/fragment_analytics" >
+        <action
+            android:id="@+id/action_analytics_to_settings"
+            app:destination="@id/settingsFragment" />
     </fragment>
 
     <fragment
@@ -50,10 +63,11 @@
         android:name="com.example.finscope.CategoriesFragment"
         android:label="fragment_categories"
         tools:layout="@layout/fragment_categories" />
+
     <fragment
-        android:id="@+id/currencyFragment"
-        android:name="com.example.finscope.CurrencyFragment"
-        android:label="fragment_currency"
-        tools:layout="@layout/fragment_currency" />
+        android:id="@+id/settingsFragment"
+        android:name="com.example.finscope.SettingsFragment"
+        android:label="fragment_settings"
+        tools:layout="@layout/fragment_settings" />
 
 </navigation>

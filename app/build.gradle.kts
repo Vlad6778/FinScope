@@ -13,7 +13,7 @@ android {
     defaultConfig {
         applicationId = "com.example.finscope"
         minSdk = 24
-        targetSdk = 35
+        targetSdk = 34
         versionCode = 1
         versionName = "1.0"
 
@@ -43,6 +43,9 @@ android {
         compose = true
         viewBinding = true
         buildConfig = true
+    }
+    aaptOptions {
+        noCompress.add("tflite")
     }
 }
 
@@ -85,10 +88,19 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
-// Retrofit для роботи з мережею
+    // Retrofit для роботи з мережею
     implementation(libs.retrofit)
     // Конвертер Gson для перетворення JSON в об'єкти Kotlin
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
     // OkHttp Logging Interceptor для логування запитів та відповідей
     implementation("com.squareup.okhttp3:logging-interceptor:4.11.0")
+    
+    // Charts (MPAndroidChart)
+    implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
+
+    // Encrypted SharedPreferences
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+
+    implementation("org.tensorflow:tensorflow-lite:2.17.0")
+    implementation("org.tensorflow:tensorflow-lite-support:0.5.0")
 }

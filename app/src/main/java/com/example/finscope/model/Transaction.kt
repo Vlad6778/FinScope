@@ -1,6 +1,7 @@
 package com.example.finscope.model
 import androidx.room.Entity
 import androidx.room.ForeignKey
+import androidx.room.Index
 import androidx.room.PrimaryKey
 import java.math.BigDecimal
 import java.util.Date
@@ -20,7 +21,8 @@ import java.util.Date
             childColumns = ["category_id"],
             onDelete = ForeignKey.SET_NULL
         )
-    ]
+    ],
+    indices = [Index(value = ["external_id"], unique = true)] // Ensure external IDs are unique
 )
 data class Transaction(
     @PrimaryKey(autoGenerate = true)
@@ -28,7 +30,9 @@ data class Transaction(
     val user_id: Int,
     val category_id: Int?,
     val amount: BigDecimal,
-    val type: String,
+    val type: String, // "income" or "expense"
     val description: String?,
-    val date: Date
+    val date: Date,
+    val source: String = "manual", // "manual", "monobank", etc.
+    val external_id: String? = null // ID from external system to prevent duplicates
 )

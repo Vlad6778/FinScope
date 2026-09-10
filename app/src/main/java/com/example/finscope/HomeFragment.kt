@@ -35,8 +35,11 @@ class HomeFragment : Fragment() {
         setupRecyclerView()
 
         binding.addTransactionButton.setOnClickListener {
-
             findNavController().navigate(R.id.action_home_to_addTransaction)
+        }
+
+        binding.settingsIcon.setOnClickListener {
+            findNavController().navigate(R.id.action_home_to_settings)
         }
 
         observeViewModel()
@@ -69,7 +72,6 @@ class HomeFragment : Fragment() {
         }
 
         financeViewModel.recentTransactions.observe(viewLifecycleOwner) { transactions ->
-            // ListAdapter використовує submitList для оновлення даних та анімацій
             transactionAdapter.submitList(transactions)
         }
     }

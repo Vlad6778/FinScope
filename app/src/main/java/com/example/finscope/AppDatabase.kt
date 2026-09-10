@@ -13,7 +13,7 @@ import com.example.finscope.model.Converters
 import com.example.finscope.model.Transaction
 import com.example.finscope.model.User
 
-@Database(entities = [User::class, Category::class, Transaction::class], version = 1)
+@Database(entities = [User::class, Category::class, Transaction::class], version = 2)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun userDao(): UserDao
@@ -30,7 +30,9 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "finscope_database"
-                ).build()
+                )
+                .fallbackToDestructiveMigration() // Allow destructive migration for development changes
+                .build()
                 INSTANCE = instance
                 instance
             }

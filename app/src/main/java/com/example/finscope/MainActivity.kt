@@ -20,33 +20,29 @@ class MainActivity : AppCompatActivity() {
         val navController = findNavController(R.id.nav_host_fragment)
         navView.setupWithNavController(navController)
 
-        navView.setOnNavigationItemSelectedListener { item ->
+        navView.setOnItemSelectedListener { item ->
             when (item.itemId) {
                 R.id.homeFragment -> {
-                    val handled = navController.popBackStack(R.id.homeFragment, false)
-                    if (!handled) {
+                    if (navController.currentDestination?.id != R.id.homeFragment) {
                         navController.navigate(R.id.homeFragment)
                     }
                     true
                 }
+                R.id.analyticsFragment -> {
+                    if (navController.currentDestination?.id != R.id.analyticsFragment) {
+                        navController.navigate(R.id.analyticsFragment)
+                    }
+                    true
+                }
                 R.id.historyFragment -> {
-                    val handled = navController.popBackStack(R.id.historyFragment, false)
-                    if (!handled) {
+                    if (navController.currentDestination?.id != R.id.historyFragment) {
                         navController.navigate(R.id.historyFragment)
                     }
                     true
                 }
                 R.id.categoriesFragment -> {
-                    val handled = navController.popBackStack(R.id.categoriesFragment, false)
-                    if (!handled) {
+                    if (navController.currentDestination?.id != R.id.categoriesFragment) {
                         navController.navigate(R.id.categoriesFragment)
-                    }
-                    true
-                }
-                R.id.currencyFragment -> {
-                    val handled = navController.popBackStack(R.id.currencyFragment, false)
-                    if (!handled) {
-                        navController.navigate(R.id.currencyFragment)
                     }
                     true
                 }

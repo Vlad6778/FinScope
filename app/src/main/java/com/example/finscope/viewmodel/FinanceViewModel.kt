@@ -6,20 +6,27 @@ import com.example.finscope.AppDatabase
 import com.example.finscope.model.Category
 import com.example.finscope.model.Transaction
 import com.example.finscope.model.User
-import com.example.finscope.model.ExchangeRate
 import com.example.finscope.repository.FinanceRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
-import java.text.SimpleDateFormat
 import java.util.Date
-import java.util.Locale
+import java.util.Calendar
+import java.util.concurrent.TimeUnit
 
 object TransactionTypes {
     const val INCOME = "дохід"
     const val EXPENSE = "витрата"
 }
+
+
+data class TrendData(
+    val percentageChange: Double,
+    val isIncrease: Boolean,
+    val dateStart: Date,
+    val dateEnd: Date
+)
 
 class FinanceViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -34,11 +41,14 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
     val allCategories: LiveData<List<Category>>
     val allTransactionsForHistory: LiveData<List<Transaction>>
 
-    private val _exchangeRates = MutableLiveData<List<ExchangeRate>>()
-    val exchangeRates: LiveData<List<ExchangeRate>> = _exchangeRates
+    private val _isLoading = MutableLiveData<Boolean>()
+    val isLoading: LiveData<Boolean> = _isLoading
 
-    private val _networkError = MutableLiveData<String?>()
-    val networkError: LiveData<String?> = _networkError
+    private val _syncStatus = MutableLiveData<String?>()
+    val syncStatus: LiveData<String?> = _syncStatus
+
+    private val _expenseTrend = MutableLiveData<TrendData?>()
+    val expenseTrend: LiveData<TrendData?> = _expenseTrend
 
     init {
         val database = AppDatabase.getDatabase(application)
@@ -71,26 +81,108 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    // --- Analytics ---
+
+    fun calculateExpenseTrend(currentStartDate: Date, currentEndDate: Date) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val now = Date()
+
+            // 1. Определяем длительность периода (чтобы понять, что это: месяц, год?)
+            val diffMillis = currentEndDate.time - currentStartDate.time
+            val daysInPeriod = TimeUnit.MILLISECONDS.toDays(diffMillis) + 1
+
+            val calendar = Calendar.getInstance()
+            calendar.time = currentStartDate
+
+            // Сдвигаем назад
+            if (daysInPeriod in 28..31) {
+                calendar.add(Calendar.MONTH, -1)
+            } else if (daysInPeriod in 365..366) {
+                calendar.add(Calendar.YEAR, -1)
+            } else {
+                calendar.add(Calendar.DAY_OF_YEAR, -daysInPeriod.toInt())
+            }
+            val previousStartDate = calendar.time
+
+            // 2. Определяем, сколько дней прошло В ТЕКУЩЕМ периоде
+            val effectiveCurrentEndDate = if (currentEndDate.after(now)) now else currentEndDate
+            val millisPassed = effectiveCurrentEndDate.time - currentStartDate.time
+            val daysPassed = TimeUnit.MILLISECONDS.toDays(millisPassed).toInt()
+
+            // 3. Вычисляем конец ПРОШЛОГО периода (День-в-День)
+            calendar.time = previousStartDate
+            calendar.add(Calendar.DAY_OF_YEAR, daysPassed)
+
+            // Конец дня
+            calendar.set(Calendar.HOUR_OF_DAY, 23)
+            calendar.set(Calendar.MINUTE, 59)
+            calendar.set(Calendar.SECOND, 59)
+            val previousEndDate = calendar.time
+
+            // 4. Запрашиваем данные
+            val currentExpenses = repository.getTransactionsByPeriod(currentStartDate, effectiveCurrentEndDate, defaultUserId).firstOrNull()
+                ?.filter { it.type == TransactionTypes.EXPENSE }?.sumOf { it.amount } ?: BigDecimal.ZERO
+
+            val previousExpenses = repository.getTransactionsByPeriod(previousStartDate, previousEndDate, defaultUserId).firstOrNull()
+                ?.filter { it.type == TransactionTypes.EXPENSE }?.sumOf { it.amount } ?: BigDecimal.ZERO
+
+            // 5. Отправляем результат ВМЕСТЕ с датами
+            if (previousExpenses > BigDecimal.ZERO) {
+                val change = (currentExpenses - previousExpenses).toDouble()
+                val percentageChange = (change / previousExpenses.toDouble()) * 100
+                _expenseTrend.postValue(TrendData(percentageChange, change > 0, previousStartDate, previousEndDate))
+            } else if (currentExpenses > BigDecimal.ZERO) {
+                _expenseTrend.postValue(TrendData(100.0, true, previousStartDate, previousEndDate))
+            } else {
+                _expenseTrend.postValue(null)
+            }
+        }
+    }
+
+    // ... (ВСЕ ОСТАЛЬНЫЕ МЕТОДЫ ОСТАЮТСЯ БЕЗ ИЗМЕНЕНИЙ) ...
+
+    fun syncWithMonobank(apiToken: String) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                repository.syncWithMonobank(apiToken)
+                _syncStatus.value = "Синхронізація успішна!"
+            } catch (e: Exception) {
+                _syncStatus.value = "Помилка синхронізації: ${e.message}"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    fun onSyncStatusShown() {
+        _syncStatus.value = null
+    }
+
+    fun getTransactionsByCategoryAndPeriod(categoryId: Int, startDate: Date, endDate: Date): LiveData<List<Transaction>> {
+        return repository.getTransactionsByCategoryAndPeriod(categoryId, startDate, endDate, defaultUserId).asLiveData()
+    }
+
     private suspend fun addDefaultCategories() {
         val defaultIncomeCategories = listOf(
-            Category(user_id = defaultUserId, name = "Зарплата", type = TransactionTypes.INCOME),
-            Category(user_id = defaultUserId, name = "Стипендія", type = TransactionTypes.INCOME),
-            Category(user_id = defaultUserId, name = "Подарунок", type = TransactionTypes.INCOME),
-            Category(user_id = defaultUserId, name = "Аванс", type = TransactionTypes.INCOME),
-            Category(user_id = defaultUserId, name = "Премія", type = TransactionTypes.INCOME),
-            Category(user_id = defaultUserId, name = "Відсотки", type = TransactionTypes.INCOME),
+            Category(user_id = defaultUserId, name = "Зарплата", type = TransactionTypes.INCOME, keywords = "зарплата, аванс, виплата"),
+            Category(user_id = defaultUserId, name = "Стипендія", type = TransactionTypes.INCOME, keywords = "стипендія"),
+            Category(user_id = defaultUserId, name = "Подарунок", type = TransactionTypes.INCOME, keywords = "подарунок"),
+            Category(user_id = defaultUserId, name = "Аванс", type = TransactionTypes.INCOME, keywords = "аванс"),
+            Category(user_id = defaultUserId, name = "Премія", type = TransactionTypes.INCOME, keywords = "премія"),
+            Category(user_id = defaultUserId, name = "Відсотки", type = TransactionTypes.INCOME, keywords = "відсотки, депозит"),
         )
         val defaultExpenseCategories = listOf(
-            Category(user_id = defaultUserId, name = "Продукти", type = TransactionTypes.EXPENSE),
-            Category(user_id = defaultUserId, name = "Медицина", type = TransactionTypes.EXPENSE),
-            Category(user_id = defaultUserId, name = "Розваги", type = TransactionTypes.EXPENSE),
-            Category(user_id = defaultUserId, name = "Транспорт", type = TransactionTypes.EXPENSE),
-            Category(user_id = defaultUserId, name = "Комунальні", type = TransactionTypes.EXPENSE),
-            Category(user_id = defaultUserId, name = "Одяг/Взуття", type = TransactionTypes.EXPENSE),
-            Category(user_id = defaultUserId, name = "Побут", type = TransactionTypes.EXPENSE),
-            Category(user_id = defaultUserId, name = "Освіта", type = TransactionTypes.EXPENSE),
-            Category(user_id = defaultUserId, name = "Подорожі", type = TransactionTypes.EXPENSE),
-            Category(user_id = defaultUserId, name = "Подарунки іншим", type = TransactionTypes.EXPENSE),
+            Category(user_id = defaultUserId, name = "Продукти", type = TransactionTypes.EXPENSE, keywords = "сільпо, атб, ашан, продукти, їжа, маркет"),
+            Category(user_id = defaultUserId, name = "Медицина", type = TransactionTypes.EXPENSE, keywords = "аптека, ліки, лікар"),
+            Category(user_id = defaultUserId, name = "Розваги", type = TransactionTypes.EXPENSE, keywords = "кіно, театр, боулінг, клуб"),
+            Category(user_id = defaultUserId, name = "Транспорт", type = TransactionTypes.EXPENSE, keywords = "проїзд, таксі, убер, болт, метро, автобус"),
+            Category(user_id = defaultUserId, name = "Комунальні", type = TransactionTypes.EXPENSE, keywords = "світло, газ, вода, інтернет, квартплата"),
+            Category(user_id = defaultUserId, name = "Одяг/Взуття", type = TransactionTypes.EXPENSE, keywords = "одяг, взуття, zara, h&m"),
+            Category(user_id = defaultUserId, name = "Побут", type = TransactionTypes.EXPENSE, keywords = "хімія, дім, ремонт"),
+            Category(user_id = defaultUserId, name = "Освіта", type = TransactionTypes.EXPENSE, keywords = "курси, навчання, книги"),
+            Category(user_id = defaultUserId, name = "Подорожі", type = TransactionTypes.EXPENSE, keywords = "квитки, готель, поїзд, літак"),
+            Category(user_id = defaultUserId, name = "Подарунки іншим", type = TransactionTypes.EXPENSE, keywords = "квіти, подарунок"),
         )
         defaultIncomeCategories.forEach { repository.insertCategory(it) }
         defaultExpenseCategories.forEach { repository.insertCategory(it) }
@@ -114,6 +206,10 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
 
     fun getTransactionById(id: Int): LiveData<Transaction?> {
         return repository.getTransactionById(id, defaultUserId).asLiveData()
+    }
+
+    fun getTransactionsByPeriod(startDate: Date, endDate: Date): LiveData<List<Transaction>> {
+        return repository.getTransactionsByPeriod(startDate, endDate, defaultUserId).asLiveData()
     }
 
     fun updateTransactionAndAdjustBalance(originalTransaction: Transaction, updatedTransaction: Transaction) {
@@ -205,23 +301,5 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch(Dispatchers.IO) {
             repository.deleteCategory(category)
         }
-    }
-
-    fun fetchExchangeRates() {
-        viewModelScope.launch(Dispatchers.IO) {
-            val dateFormat = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
-            val currentDate = dateFormat.format(Date())
-            val result = repository.getExchangeRates(currentDate)
-            result.onSuccess { rates ->
-                _exchangeRates.postValue(rates)
-                _networkError.postValue(null)
-            }.onFailure { exception ->
-                _networkError.postValue("Помилка завантаження даних: ${exception.message}")
-            }
-        }
-    }
-
-    fun onNetworkErrorShown() {
-        _networkError.value = null
     }
 }

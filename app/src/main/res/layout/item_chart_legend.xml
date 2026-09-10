@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingVertical="8dp">
+
+    <View
+        android:id="@+id/vColorIndicator"
+        android:layout_width="12dp"
+        android:layout_height="12dp"
+        android:background="@drawable/bg_circle_indicator"
+        android:layout_marginEnd="12dp" />
+    <TextView
+        android:id="@+id/tvCategoryName"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text="Категорія"
+        android:textColor="#333333"
+        android:textSize="14sp" />
+
+    <TextView
+        android:id="@+id/tvCategoryAmount"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="0 ₴"
+        android:textColor="#333333"
+        android:textStyle="bold"
+        android:textSize="14sp" />
+        
+    <TextView
+        android:id="@+id/tvCategoryPercent"
+        android:layout_width="40dp"
+        android:layout_height="wrap_content"
+        android:gravity="end"
+        android:text="10%"
+        android:textColor="#757575"
+        android:textSize="12sp"
+        android:layout_marginStart="8dp"/>
+</LinearLayout>

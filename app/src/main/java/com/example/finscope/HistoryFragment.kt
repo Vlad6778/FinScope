@@ -6,8 +6,10 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
+import android.widget.ImageButton
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
+import androidx.core.util.Pair
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
@@ -18,9 +20,11 @@ import com.example.finscope.model.Transaction
 import com.example.finscope.viewmodel.FinanceViewModel
 import com.example.finscope.viewmodel.FinanceViewModelFactory
 import com.example.finscope.viewmodel.TransactionTypes
+import com.google.android.material.datepicker.MaterialDatePicker
+import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
-import android.widget.ImageButton
+import java.util.Locale
 
 class HistoryFragment : Fragment() {
 
@@ -35,12 +39,15 @@ class HistoryFragment : Fragment() {
     private var allRawCategoriesList: List<Category> = emptyList()
     private var selectedCategoryFilter: Category? = null
     private var selectedTypeFilter: String? = null
-    private var selectedPeriodStart: Date? = null
-    private var selectedPeriodEnd: Date? = null
+
+    // Инициализируем текущим моментом, чтобы избежать null
+    private var selectedPeriodStart: Date = Date()
+    private var selectedPeriodEnd: Date = Date()
 
     private var currentFullTransactionListFromDb: List<Transaction> = emptyList()
     private var hasAttemptedToLoadData = false
 
+    private val dateFormatter = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -64,8 +71,11 @@ class HistoryFragment : Fragment() {
 
         if (savedInstanceState == null) {
             binding.toggleButtonGroupPeriod.check(R.id.button_filter_month)
-            applyPeriodFilter(R.id.button_filter_month)
+            // При старте устанавливаем "Месяц"
+            setPeriodMonth()
         } else {
+            // Восстанавливаем лейбл при повороте экрана
+            updateDateRangeLabel()
             applyFiltersToListing()
         }
     }
@@ -102,12 +112,24 @@ class HistoryFragment : Fragment() {
     }
 
     private fun setupFilterControls() {
+        // 1. Логика кнопок быстрого выбора (День/Неделя/...)
         binding.toggleButtonGroupPeriod.addOnButtonCheckedListener { _, checkedId, isChecked ->
             if (isChecked) {
-                applyPeriodFilter(checkedId)
+                when (checkedId) {
+                    R.id.button_filter_day -> setPeriodDay()
+                    R.id.button_filter_week -> setPeriodWeek()
+                    R.id.button_filter_month -> setPeriodMonth()
+                    R.id.button_filter_year -> setPeriodYear()
+                }
             }
         }
 
+        // 2. Логика ручного выбора даты (Календарь)
+        binding.btnDateRangePicker.setOnClickListener {
+            showDateRangePicker()
+        }
+
+        // 3. Спиннеры Типа и Категории
         val typeOptions = listOf("Всі типи", TransactionTypes.INCOME, TransactionTypes.EXPENSE)
         val typeAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, typeOptions)
         typeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
@@ -127,7 +149,6 @@ class HistoryFragment : Fragment() {
             val categoryAdapterSpinner = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, categoryNames)
             categoryAdapterSpinner.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
             binding.spinnerFilterCategory.adapter = categoryAdapterSpinner
-
         }
 
         binding.spinnerFilterCategory.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
@@ -139,36 +160,105 @@ class HistoryFragment : Fragment() {
         }
     }
 
-    private fun applyPeriodFilter(checkedId: Int) {
-        val calendar = Calendar.getInstance()
-        calendar.set(Calendar.HOUR_OF_DAY, 0); calendar.set(Calendar.MINUTE, 0); calendar.set(Calendar.SECOND, 0); calendar.set(Calendar.MILLISECOND, 0)
+    // --- ЛОГИКА КАЛЕНДАРЯ ---
+    private fun showDateRangePicker() {
+        val dateRangePicker = MaterialDatePicker.Builder.dateRangePicker()
+            .setTitleText("Оберіть період історії")
+            .setSelection(Pair(selectedPeriodStart.time, selectedPeriodEnd.time))
+            .build()
 
-        when (checkedId) {
-            R.id.button_filter_day -> {
-                selectedPeriodStart = calendar.time
-                calendar.add(Calendar.DAY_OF_YEAR, 1); calendar.add(Calendar.MILLISECOND, -1)
-                selectedPeriodEnd = calendar.time
-            }
-            R.id.button_filter_week -> {
-                calendar.set(Calendar.DAY_OF_WEEK, calendar.firstDayOfWeek)
-                selectedPeriodStart = calendar.time
-                calendar.add(Calendar.WEEK_OF_YEAR, 1); calendar.add(Calendar.MILLISECOND, -1)
-                selectedPeriodEnd = calendar.time
-            }
-            R.id.button_filter_month -> {
-                calendar.set(Calendar.DAY_OF_MONTH, 1)
-                selectedPeriodStart = calendar.time
-                calendar.add(Calendar.MONTH, 1); calendar.add(Calendar.MILLISECOND, -1)
-                selectedPeriodEnd = calendar.time
-            }
-            R.id.button_filter_year -> {
-                calendar.set(Calendar.DAY_OF_YEAR, 1)
-                selectedPeriodStart = calendar.time
-                calendar.add(Calendar.YEAR, 1); calendar.add(Calendar.MILLISECOND, -1)
-                selectedPeriodEnd = calendar.time
-            }
+        dateRangePicker.addOnPositiveButtonClickListener { selection ->
+            // Устанавливаем новые даты
+            selectedPeriodStart = Date(selection.first)
+            selectedPeriodEnd = Date(selection.second)
+
+            // Снимаем выделение с кнопок "День/Месяц...", так как выбран свой период
+            binding.toggleButtonGroupPeriod.clearChecked()
+
+            // Обновляем UI
+            updateDateRangeLabel()
+            applyFiltersToListing()
         }
+        dateRangePicker.show(parentFragmentManager, "history_date_picker")
+    }
+
+    private fun updateDateRangeLabel() {
+        val startStr = dateFormatter.format(selectedPeriodStart)
+        val endStr = dateFormatter.format(selectedPeriodEnd)
+        // Если даты совпадают (один день), показываем одну дату
+        if (startStr == endStr) {
+            binding.tvCurrentDateRange.text = startStr
+        } else {
+            binding.tvCurrentDateRange.text = "$startStr - $endStr"
+        }
+    }
+
+    // --- ФУНКЦИИ БЫСТРЫХ ПЕРИОДОВ ---
+    private fun setPeriodDay() {
+        val calendar = Calendar.getInstance()
+        clearTime(calendar)
+        selectedPeriodStart = calendar.time
+
+        // Конец дня
+        calendar.add(Calendar.DAY_OF_YEAR, 1)
+        calendar.add(Calendar.MILLISECOND, -1)
+        selectedPeriodEnd = calendar.time
+
+        updateDateRangeLabel()
         applyFiltersToListing()
+    }
+
+    private fun setPeriodWeek() {
+        val calendar = Calendar.getInstance()
+        clearTime(calendar)
+        calendar.firstDayOfWeek = Calendar.MONDAY
+        calendar.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
+        selectedPeriodStart = calendar.time
+
+        calendar.add(Calendar.DAY_OF_WEEK, 6)
+        // Конец дня воскресенья
+        calendar.set(Calendar.HOUR_OF_DAY, 23)
+        calendar.set(Calendar.MINUTE, 59)
+        calendar.set(Calendar.SECOND, 59)
+        selectedPeriodEnd = calendar.time
+
+        updateDateRangeLabel()
+        applyFiltersToListing()
+    }
+
+    private fun setPeriodMonth() {
+        val calendar = Calendar.getInstance()
+        clearTime(calendar)
+        calendar.set(Calendar.DAY_OF_MONTH, 1)
+        selectedPeriodStart = calendar.time
+
+        calendar.add(Calendar.MONTH, 1)
+        calendar.add(Calendar.MILLISECOND, -1)
+        selectedPeriodEnd = calendar.time
+
+        updateDateRangeLabel()
+        applyFiltersToListing()
+    }
+
+    private fun setPeriodYear() {
+        val calendar = Calendar.getInstance()
+        clearTime(calendar)
+        calendar.set(Calendar.DAY_OF_YEAR, 1)
+        selectedPeriodStart = calendar.time
+
+        calendar.add(Calendar.YEAR, 1)
+        calendar.add(Calendar.MILLISECOND, -1)
+        selectedPeriodEnd = calendar.time
+
+        updateDateRangeLabel()
+        applyFiltersToListing()
+    }
+
+    private fun clearTime(calendar: Calendar) {
+        calendar.set(Calendar.HOUR_OF_DAY, 0)
+        calendar.set(Calendar.MINUTE, 0)
+        calendar.set(Calendar.SECOND, 0)
+        calendar.set(Calendar.MILLISECOND, 0)
     }
 
     private fun observeViewModel() {
@@ -187,16 +277,12 @@ class HistoryFragment : Fragment() {
 
         var filteredList = currentFullTransactionListFromDb
 
-        selectedPeriodStart?.let { start ->
-            selectedPeriodEnd?.let { end ->
-                filteredList = filteredList.filter {
-                    val transactionDateCal = Calendar.getInstance().apply { time = it.date; clearTime() }
-                    val startDateCal = Calendar.getInstance().apply { time = start; clearTime() }
-                    val endDateCal = Calendar.getInstance().apply { time = end; clearTime() }
-                    !transactionDateCal.before(startDateCal) && !transactionDateCal.after(endDateCal)
-                }
-            }
+        // Фильтрация по дате
+        filteredList = filteredList.filter {
+            val txDate = it.date.time
+            txDate >= selectedPeriodStart.time && txDate <= selectedPeriodEnd.time
         }
+
         selectedTypeFilter?.let { type ->
             filteredList = filteredList.filter { it.type == type }
         }
@@ -206,31 +292,14 @@ class HistoryFragment : Fragment() {
 
         transactionAdapter.submitList(filteredList.sortedByDescending { it.date })
 
+        // Логика пустых состояний
+        val isEmptyResult = filteredList.isEmpty()
+        binding.textViewEmptyHistory.visibility = if (isEmptyResult) View.VISIBLE else View.GONE
 
-        if (hasAttemptedToLoadData && filteredList.isEmpty()) {
-            if (selectedCategoryFilter != null || selectedTypeFilter != null || !isDefaultPeriodMonthInitiallyChecked()) {
-                Toast.makeText(context, "Немає транзакцій за обраними фільтрами", Toast.LENGTH_SHORT).show()
-            }
-
-            else if (currentFullTransactionListFromDb.isEmpty()){
-                Toast.makeText(context, "У вас ще немає транзакцій", Toast.LENGTH_SHORT).show()
-            }
+        if (hasAttemptedToLoadData && isEmptyResult && currentFullTransactionListFromDb.isNotEmpty()) {
+            // Можно показывать Toast, но лучше просто textViewEmptyHistory
         }
     }
-
-    // Допоміжна функція для очищення часу в Calendar
-    private fun Calendar.clearTime() {
-        set(Calendar.HOUR_OF_DAY, 0)
-        set(Calendar.MINUTE, 0)
-        set(Calendar.SECOND, 0)
-        set(Calendar.MILLISECOND, 0)
-    }
-
-    private fun isDefaultPeriodMonthInitiallyChecked(): Boolean {
-        return binding.toggleButtonGroupPeriod.checkedButtonId == R.id.button_filter_month &&
-                selectedCategoryFilter == null && selectedTypeFilter == null
-    }
-
 
     override fun onDestroyView() {
         super.onDestroyView()

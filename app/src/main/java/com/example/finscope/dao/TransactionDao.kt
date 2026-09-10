@@ -31,8 +31,16 @@ interface TransactionDao {
 
     @Query("SELECT * FROM transactions WHERE user_id = :userId AND type = :transactionType ORDER BY date DESC")
     fun getTransactionsByType(transactionType: String, userId: Int = 1): Flow<List<Transaction>>
+    
+    @Query("SELECT * FROM transactions WHERE user_id = :userId AND category_id = :categoryId AND date BETWEEN :startDate AND :endDate ORDER BY date DESC")
+    fun getTransactionsByCategoryAndPeriod(categoryId: Int, startDate: Date, endDate: Date, userId: Int = 1): Flow<List<Transaction>>
+
     @Query("SELECT * FROM transactions WHERE user_id = :userId ORDER BY date DESC LIMIT :limit")
     fun getRecentTransactions(userId: Int = 1, limit: Int): Flow<List<Transaction>>
+
     @Query("UPDATE transactions SET type = :newType WHERE category_id = :categoryId AND user_id = :userId")
     suspend fun updateTransactionsType(categoryId: Int, newType: String, userId: Int = 1)
+
+    @Query("SELECT * FROM transactions WHERE external_id = :externalId LIMIT 1")
+    suspend fun getTransactionByExternalId(externalId: String): Transaction?
 }

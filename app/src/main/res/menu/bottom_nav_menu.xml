@@ -5,6 +5,10 @@
         android:icon="@drawable/ic_home"
         android:title="Головна" />
     <item
+        android:id="@+id/analyticsFragment"
+        android:icon="@drawable/ic_analytics"
+        android:title="Аналітика" />
+    <item
         android:id="@+id/historyFragment"
         android:icon="@drawable/ic_history"
         android:title="Історія" />
@@ -12,8 +16,4 @@
         android:id="@+id/categoriesFragment"
         android:icon="@drawable/ic_categories"
         android:title="Категорії" />
-    <item
-        android:id="@+id/currencyFragment"
-        android:icon="@drawable/ic_currency_exchange"
-        android:title="Курси валют" />
 </menu>

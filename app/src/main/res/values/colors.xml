@@ -1,18 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="background">#F5F5F5</color>
-    <color name="text">#333333</color>
-    <color name="income_color">#4CAF50</color>
-    <color name="expense_color">#F44336</color>
-    <color name="button_action">#2196F3</color>
-    <color name="button_cancel">#757575</color>
-    <color name="income_color_chip">#E8F5E9</color> <color name="expense_color_chip">#FFEBEE</color> <color name="text_color_income_chip">#388E3C</color>
-    <color name="text_color_expense_chip">#D32F2F</color>
-    <!-- Нові кольори для теми -->
-    <color name="colorPrimary">#2196F3</color> <!-- Використовуємо button_action -->
-    <color name="colorPrimaryVariant">#1976D2</color> <!-- Темніший відтінок -->
-    <color name="colorOnPrimary">#FFFFFF</color> <!-- Текст на primary-кнопці -->
+    <!-- Base App Colors -->
+    <color name="purple_200">#FFBB86FC</color>
+    <color name="purple_500">#FF6200EE</color>
+    <color name="purple_700">#FF3700B3</color>
+    <color name="teal_200">#FF03DAC5</color>
+    <color name="teal_700">#FF018786</color>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
 
-    <color name="colorSecondary">#4CAF50</color> <!-- income_color -->
-    <color name="colorSecondaryVariant">#388E3C</color>
-    <color name="colorOnSecondary">#FFFFFF</color>
+    <!-- Theme Colors (for styles) -->
+    <color name="colorPrimary">@color/purple_500</color>
+    <color name="colorPrimaryVariant">@color/purple_700</color>
+    <color name="colorOnPrimary">@color/white</color>
+    <color name="colorSecondary">@color/teal_200</color>
+    <color name="colorSecondaryVariant">@color/teal_700</color>
+    <color name="colorOnSecondary">@color/black</color>
+    <color name="background">#FFF5F5F5</color>
+
+    <!-- Trend Colors (for Analytics) -->
+    <color name="red">#F44336</color>
+    <color name="green">#4CAF50</color>
+    
+    <!-- Chip Colors (for Categories) -->
+    <color name="income_color_chip">#4CAF50</color>
+    <color name="expense_color_chip">#F44336</color>
+    <color name="text_color_income_chip">#FFFFFF</color>
+    <color name="text_color_expense_chip">#FFFFFF</color>
+
 </resources>
